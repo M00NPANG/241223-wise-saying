@@ -14,6 +14,26 @@ public class App {
             System.out.print("명령) ");
             String command = sc.nextLine().trim();;
 
+
+            if(command.startsWith("삭제")) {
+                //"삭제?id=___"에서 id값 추출
+                String[] parts = command.split("//?");  // "삭제"와 "id=_" 분리
+                if(parts[1].startsWith("id=")) {    // id=__의 명령어 형태가 올바른지 확인
+                    int id = Integer.parseInt(parts[1].substring(3));    // id값 추출
+
+                    if(catalog.containsKey(id)) {       // 카탈로그에 해당 id를 가진 명언이 존재하는지 확인
+                        catalog.remove(id);             // id에 맞는 명언 삭제
+                        System.out.println(id + "번 명언이 삭제되었습니다.");
+                    } else {                            // 존재하지 않는 명언 예외처리
+                        System.out.println(id + "번 명언은 존재하지 습니다.");
+                    }
+                } else {                                //잘못된 명령어 예외처리
+                    System.out.println("잘못된 명령어 형식입니다. 명령어 예시 : 삭제?id=1");
+                }
+
+                continue;
+            }
+
             switch (command) {
                 case "등록":
                     System.out.print("명언 : ");
