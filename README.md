@@ -1,1 +1,0 @@
-# 241223-wise-saying
