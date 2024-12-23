@@ -12,20 +12,15 @@ public class App {
         while (true) {
 
             System.out.print("명령) ");
-
-            String command = sc.nextLine();
+            String command = sc.nextLine().trim();;
 
             switch (command) {
-                case "종료":
-                    System.exit(0);
-                    break;
-
                 case "등록":
                     System.out.print("명언 : ");
-                    String 명언 = sc.nextLine();
+                    String 명언 = sc.nextLine().trim();
 
                     System.out.print("작가 : ");
-                    String 작가 = sc.nextLine();
+                    String 작가 = sc.nextLine().trim();
 
                     WiseSaying wiseSaying = new WiseSaying(명언, 작가);
                     catalog.put(wiseSaying.getId(), wiseSaying);
@@ -44,6 +39,10 @@ public class App {
                             ws.getCatalog();
                         }
                     }
+                    break;
+
+                case "종료":
+                    System.exit(0);
                     break;
 
                 default: // 잘못된 명령 처리
