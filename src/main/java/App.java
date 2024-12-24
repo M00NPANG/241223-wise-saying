@@ -7,9 +7,12 @@ public class App {
     private Scanner scanner = new Scanner(System.in);
     private Map<Integer, WiseSaying> sayings = new HashMap<>();
     private static final String DIRECTORY_PATH = "D:/Coding/wiseSaying/db/wiseSaying"; // 기본 경로
+    private int lastId = 1; // ID 초기값
 
     public void run() {
+        loadAllFiles();
         System.out.println("== 명언 앱 ==");
+        loadAllFiles(); // 시작 시 JSON 파일 로드
         while (true) {
             System.out.print("명령) ");
             String input = scanner.nextLine().trim();
@@ -83,7 +86,7 @@ public class App {
         System.out.print("작가 : ");
         String author = scanner.nextLine().trim();
 
-        WiseSaying newSaying = new WiseSaying(quote, author);
+        WiseSaying newSaying = new WiseSaying(quote, author, lastId);
 
         try {
             saveFile(newSaying);
@@ -93,6 +96,7 @@ public class App {
 
         sayings.put(newSaying.getId(), newSaying);
         System.out.println(newSaying.getId() + "번 명언이 등록되었습니다.");
+        lastId++; // ID 증가
     }
 
     private void showSayings() {
@@ -115,7 +119,7 @@ public class App {
         if (!directory.exists()) {
             boolean isCreated = directory.mkdirs();
             if (!isCreated) {
-                throw new IOException("디렉토리 생성 실패: " + DIRECTORY_PATH);
+                throw new IOException("디렉토리 생성 실패");
             }
         }
 
@@ -126,7 +130,7 @@ public class App {
         }
     }
 
-    private void loadAllFiles() {
+    void loadAllFiles() {
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         File directory = new File(DIRECTORY_PATH);
 
@@ -146,27 +150,21 @@ public class App {
             try (FileReader reader = new FileReader(file)) {
                 WiseSaying wiseSaying = gson.fromJson(reader, WiseSaying.class);
                 sayings.put(wiseSaying.getId(), wiseSaying);
+                lastId = Math.max(lastId, wiseSaying.getId() + 1); // 마지막 ID 갱신
             } catch (IOException e) {
                 System.err.println("파일 읽기 오류: " + file.getName() + " - " + e.getMessage());
             }
         }
     }
-
-    public static void main(String[] args) {
-        App app = new App();
-        app.loadAllFiles(); // 시작 시 JSON 파일 로드
-        app.run();
-    }
 }
 
 class WiseSaying {
-    private static int idCounter = 0;
     private int id;
     private String quote;
     private String author;
 
-    public WiseSaying(String quote, String author) {
-        this.id = ++idCounter;
+    public WiseSaying(String quote, String author, int id) {
+        this.id = id;
         this.quote = quote;
         this.author = author;
     }
