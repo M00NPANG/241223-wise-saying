@@ -1,18 +1,19 @@
+import Model.WiseSaying;
 import com.google.gson.*;
 
 import java.io.*;
 import java.util.*;
 
 public class App {
-    private Scanner scanner = new Scanner(System.in);
-    private Map<Integer, WiseSaying> sayings = new HashMap<>();
+    private final Scanner scanner = new Scanner(System.in);
+    private final Map<Integer, WiseSaying> sayings = new HashMap<>();
     private static final String DIRECTORY_PATH = "D:/Coding/wiseSaying/db/wiseSaying"; // 기본 경로
-    private int lastId = 1; // ID 초기값
+    private int lastId = 0; // ID 초기값
 
     public void run() {
         loadAllFiles();
+
         System.out.println("== 명언 앱 ==");
-        loadAllFiles(); // 시작 시 JSON 파일 로드
         while (true) {
             System.out.print("명령) ");
             String input = scanner.nextLine().trim();
@@ -30,6 +31,7 @@ public class App {
                     showSayings();
                     break;
                 case "종료":
+                    lastFileSave();
                     System.exit(0);
                     break;
                 default:
@@ -56,6 +58,7 @@ public class App {
         }
 
         if (action.equals("삭제")) {
+            deleteFile(id);
             sayings.remove(id);
             System.out.println(id + "번 명언이 삭제되었습니다.");
         } else {
@@ -73,7 +76,7 @@ public class App {
         targetSaying.setAuthor(scanner.nextLine().trim());
 
         try {
-            saveFile(targetSaying);
+            saveFileAsJson(targetSaying);
         } catch (IOException e) {
             System.err.println("명언 수정 중 파일 저장 오류: " + e.getMessage());
         }
@@ -86,10 +89,10 @@ public class App {
         System.out.print("작가 : ");
         String author = scanner.nextLine().trim();
 
-        WiseSaying newSaying = new WiseSaying(quote, author, lastId);
+        WiseSaying newSaying = new WiseSaying(quote, author, lastId + 1);
 
         try {
-            saveFile(newSaying);
+            saveFileAsJson(newSaying);
         } catch (IOException e) {
             System.err.println("명언 등록 중 파일 저장 오류: " + e.getMessage());
         }
@@ -98,6 +101,7 @@ public class App {
         System.out.println(newSaying.getId() + "번 명언이 등록되었습니다.");
         lastId++; // ID 증가
     }
+
 
     private void showSayings() {
         System.out.println("번호 / 작가 / 명언");
@@ -112,84 +116,99 @@ public class App {
         }
     }
 
-    private void saveFile(WiseSaying wiseSaying) throws IOException {
-        Gson gson = new GsonBuilder().setPrettyPrinting().create();
-
+    private void saveFileAsJson(WiseSaying wiseSaying) throws IOException {
         File directory = new File(DIRECTORY_PATH);
-        if (!directory.exists()) {
-            boolean isCreated = directory.mkdirs();
-            if (!isCreated) {
-                throw new IOException("디렉토리 생성 실패");
-            }
+        if (!directory.exists() && !directory.mkdirs()) {
+            throw new IOException("디렉토리 생성 실패");
         }
 
-        String filePath = DIRECTORY_PATH + File.separator + wiseSaying.getId() + ".json";
+        String filePathJson = DIRECTORY_PATH + File.separator + wiseSaying.getId() + ".json";
 
-        try (FileWriter writer = new FileWriter(filePath)) {
+        try (FileWriter writer = new FileWriter(filePathJson)) {
+            Gson gson = new GsonBuilder().setPrettyPrinting().create();
             gson.toJson(wiseSaying, writer);
         }
     }
 
-    void loadAllFiles() {
-        Gson gson = new GsonBuilder().setPrettyPrinting().create();
-        File directory = new File(DIRECTORY_PATH);
-
-        if (!directory.exists() || !directory.isDirectory()) {
-            System.out.println("저장된 JSON 파일이 없습니다.");
+    private void lastFileSave() {
+        // lastId와 동일한 객체를 가져옴
+        WiseSaying targetSaying = sayings.get(lastId);
+        if (targetSaying == null) {
+            System.out.println("lastId에 해당하는 데이터가 존재하지 않습니다.");
             return;
         }
 
-        File[] files = directory.listFiles((dir, name) -> name.endsWith(".json"));
+        // 텍스트 파일로 저장
+        String filePathTxt = DIRECTORY_PATH + File.separator + lastId + ".txt";
+        try (FileWriter writer = new FileWriter(filePathTxt)) {
+            writer.write("id: " + targetSaying.getId() + "\n");
+            writer.write("명언: " + targetSaying.getQuote() + "\n");
+            writer.write("작가: " + targetSaying.getAuthor() + "\n");
+            System.out.println("텍스트 파일 생성: " + filePathTxt);
+        } catch (IOException e) {
+            System.err.println("텍스트 파일 생성 중 오류: " + e.getMessage());
+            return;
+        }
+
+        // 기존 JSON 파일 삭제
+        System.out.println("삭제 대상 파일: " + lastId + ".json");
+        deleteFile(lastId);
+
+        System.out.println("lastId 데이터가 텍스트 파일로 변환되고 JSON 파일이 삭제되었습니다.");
+    }
+
+
+    private void deleteFile(int id) {
+        String filePathJson = DIRECTORY_PATH + File.separator + id + ".json";
+        File fileJson = new File(filePathJson);
+
+        if (fileJson.exists() && fileJson.delete()) {
+            System.out.println(id + "번 명언 파일(.json)이 삭제되었습니다.");
+        }
+    }
+
+    private void loadAllFiles() {
+        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+        File directory = new File(DIRECTORY_PATH);
+
+        File[] files = directory.listFiles((dir, name) -> name.endsWith(".json") || name.endsWith(".txt"));
 
         if (files == null || files.length == 0) {
-            System.out.println("저장된 JSON 파일이 없습니다.");
+            System.out.println("저장된 명언이 없습니다.");
             return;
         }
 
         for (File file : files) {
-            try (FileReader reader = new FileReader(file)) {
-                WiseSaying wiseSaying = gson.fromJson(reader, WiseSaying.class);
-                sayings.put(wiseSaying.getId(), wiseSaying);
-                lastId = Math.max(lastId, wiseSaying.getId() + 1); // 마지막 ID 갱신
-            } catch (IOException e) {
-                System.err.println("파일 읽기 오류: " + file.getName() + " - " + e.getMessage());
+            try {
+                if (file.getName().endsWith(".json")) {
+                    try (FileReader reader = new FileReader(file)) {
+                        WiseSaying wiseSaying = gson.fromJson(reader, WiseSaying.class);
+                        sayings.put(wiseSaying.getId(), wiseSaying);
+                        lastId = Math.max(lastId, wiseSaying.getId()); // 마지막 ID 갱신
+                    }
+                } else if (file.getName().endsWith(".txt")) {
+                    try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+                        String idLine = reader.readLine();
+                        String quoteLine = reader.readLine();
+                        String authorLine = reader.readLine();
+
+                        if (idLine == null || quoteLine == null || authorLine == null) {
+                            System.err.println("텍스트 파일 형식이 잘못되었습니다: " + file.getName());
+                            continue;
+                        }
+
+                        int id = Integer.parseInt(idLine.replace("id: ", "").trim());
+                        String quote = quoteLine.replace("명언: ", "").trim();
+                        String author = authorLine.replace("작가: ", "").trim();
+
+                        WiseSaying wiseSaying = new WiseSaying(quote, author, id);
+                        sayings.put(id, wiseSaying);
+                        lastId = Math.max(lastId, id); // 마지막 ID 갱신
+                    }
+                }
+            } catch (IOException | NumberFormatException e) {
+                System.err.println("파일 처리 중 오류: " + file.getName() + " - " + e.getMessage());
             }
         }
-    }
-}
-
-class WiseSaying {
-    private int id;
-    private String quote;
-    private String author;
-
-    public WiseSaying(String quote, String author, int id) {
-        this.id = id;
-        this.quote = quote;
-        this.author = author;
-    }
-
-    public void display() {
-        System.out.println(id + " / " + quote + " / " + author);
-    }
-
-    public int getId() {
-        return id;
-    }
-
-    public String getQuote() {
-        return quote;
-    }
-
-    public void setQuote(String quote) {
-        this.quote = quote;
-    }
-
-    public String getAuthor() {
-        return author;
-    }
-
-    public void setAuthor(String author) {
-        this.author = author;
     }
 }
